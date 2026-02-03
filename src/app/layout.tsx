@@ -10,7 +10,7 @@ const cinzel = Cinzel({
 });
 
 export const metadata: Metadata = {
-  title: "Molt Onboard Tracker"
+  title: "Molt Alpha Tracker"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
