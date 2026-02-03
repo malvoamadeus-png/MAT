@@ -1,0 +1,16 @@
+export type OnboardRow = {
+  registered_at: string;
+  registered_at_utc8: string;
+  username: string | null;
+  handle: string;
+  followers_count: number | null;
+  bio: string | null;
+  category: string | null;
+};
+
+export type RecordsResponse = {
+  items: OnboardRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
