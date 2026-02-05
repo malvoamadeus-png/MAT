@@ -20,11 +20,16 @@ export async function GET(request: Request) {
     const categories = categoriesRaw ? categoriesRaw.split(",").map((s) => s.trim()).filter(Boolean) : [];
 
     const supabase = getSupabaseAdmin();
-    const columns = "registered_at,registered_at_utc8,username,handle,followers_count,bio,category,wallet_address";
+    const columns =
+      "registered_at,registered_at_utc8,username,handle,followers_count,bio,category,wallet_address,grok_summary,grok_recent_focus,grok_experience,grok_highlights,grok_crypto_attitude,grok_checked_at";
 
     let query = supabase
       .from("molt_onboard")
       .select(columns, { count: "exact" })
+      .gt("followers_count", 5000)
+      .neq("category", "/")
+      .not("grok_checked_at", "is", null)
+      .order("followers_count", { ascending: false })
       .order("registered_at", { ascending: false });
 
     const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
@@ -49,7 +54,17 @@ export async function GET(request: Request) {
     const to = from + pageSize - 1;
     const { data, error, count } = await query.range(from, to);
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      const msg = error.message || "Unknown error";
+      if (msg.includes("does not exist") && msg.includes("grok_")) {
+        return NextResponse.json(
+          {
+            error:
+              "精选字段尚未在 Supabase 建表/迁移：请先执行 supabase/grok_profile_migration.sql 后重试。"
+          },
+          { status: 500 }
+        );
+      }
+      return NextResponse.json({ error: msg }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -62,4 +77,3 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: e?.message || "Unknown error" }, { status: 500 });
   }
 }
-

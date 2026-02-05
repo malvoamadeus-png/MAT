@@ -6,6 +6,13 @@ export type OnboardRow = {
   followers_count: number | null;
   bio: string | null;
   category: string | null;
+  wallet_address: string | null;
+  grok_summary?: string | null;
+  grok_recent_focus?: string[] | null;
+  grok_experience?: string[] | null;
+  grok_highlights?: string[] | null;
+  grok_crypto_attitude?: string | null;
+  grok_checked_at?: string | null;
 };
 
 export type RecordsResponse = {

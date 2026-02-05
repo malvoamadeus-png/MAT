@@ -19,18 +19,33 @@ function formatNumber(value: number | null) {
 }
 
 export function TrackerClient() {
+  const [tab, setTab] = useState<"discover" | "featured">("discover");
+
   const [items, setItems] = useState<OnboardRow[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
 
-  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [activeWallet, setActiveWallet] = useState<string | null>(null);
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [minFollowers, setMinFollowers] = useState("");
   const [maxFollowers, setMaxFollowers] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
+
+  const [featuredItems, setFeaturedItems] = useState<OnboardRow[]>([]);
+  const [featuredTotal, setFeaturedTotal] = useState(0);
+  const [featuredPage, setFeaturedPage] = useState(1);
+  const [featuredLoading, setFeaturedLoading] = useState(false);
+  const [featuredError, setFeaturedError] = useState<string>("");
+  const [featuredExpandedKey, setFeaturedExpandedKey] = useState<string | null>(null);
+  const [featuredStart, setFeaturedStart] = useState("");
+  const [featuredEnd, setFeaturedEnd] = useState("");
+  const [featuredMinFollowers, setFeaturedMinFollowers] = useState("");
+  const [featuredMaxFollowers, setFeaturedMaxFollowers] = useState("");
+  const [featuredCategories, setFeaturedCategories] = useState<string[]>([]);
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
@@ -45,6 +60,7 @@ export function TrackerClient() {
   }, [page, start, end, minFollowers, maxFollowers, categories]);
 
   async function load() {
+    if (tab !== "discover") return;
     setLoading(true);
     setError("");
     try {
@@ -67,6 +83,7 @@ export function TrackerClient() {
   }, [queryString]);
 
   useEffect(() => {
+    if (tab !== "discover") return;
     if (!autoRefresh) return;
     const id = window.setInterval(() => {
       load();
@@ -74,10 +91,49 @@ export function TrackerClient() {
     return () => window.clearInterval(id);
   }, [autoRefresh, queryString]);
 
+  const featuredQueryString = useMemo(() => {
+    const params = new URLSearchParams();
+    params.set("page", String(featuredPage));
+    params.set("pageSize", String(PAGE_SIZE));
+    if (featuredStart) params.set("start", featuredStart);
+    if (featuredEnd) params.set("end", featuredEnd);
+    if (featuredMinFollowers) params.set("minFollowers", featuredMinFollowers);
+    if (featuredMaxFollowers) params.set("maxFollowers", featuredMaxFollowers);
+    if (featuredCategories.length > 0) params.set("categories", featuredCategories.join(","));
+    return params.toString();
+  }, [featuredPage, featuredStart, featuredEnd, featuredMinFollowers, featuredMaxFollowers, featuredCategories]);
+
+  async function loadFeatured() {
+    if (tab !== "featured") return;
+    setFeaturedLoading(true);
+    setFeaturedError("");
+    try {
+      const resp = await fetch(`/api/featured?${featuredQueryString}`, { cache: "no-store" });
+      const data = (await resp.json()) as RecordsResponse | { error: string };
+      if (!resp.ok) {
+        throw new Error((data as any).error || "Request failed");
+      }
+      setFeaturedItems((data as RecordsResponse).items);
+      setFeaturedTotal((data as RecordsResponse).total);
+    } catch (e: any) {
+      setFeaturedError(e?.message || "加载失败");
+    } finally {
+      setFeaturedLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadFeatured();
+  }, [featuredQueryString, tab]);
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const featuredTotalPages = Math.max(1, Math.ceil(featuredTotal / PAGE_SIZE));
 
   return (
-    <div className="mx-auto max-w-6xl px-6 pb-16">
+    <div
+      className="mx-auto max-w-6xl px-6 pb-16"
+      onClick={() => setActiveWallet(null)}
+    >
       <div className="relative mt-12">
         <div className="absolute right-0 top-0 flex flex-col items-end gap-2">
           <a
@@ -126,10 +182,40 @@ export function TrackerClient() {
           <div className="mt-3 max-w-3xl text-sm text-white/85">
             分钟级追踪所有Moltbook上注册的最新账号，溯源其X账号，寻找最具潜力的AI+Crypto背景账号
           </div>
+          <div className="mt-6 flex items-center justify-center gap-2">
+            <button
+              className={`rounded-md border px-4 py-2 text-sm ${
+                tab === "discover"
+                  ? "border-accent bg-accent/10 text-accent"
+                  : "border-white/10 text-white/70 hover:bg-white/5"
+              }`}
+              onClick={() => {
+                setTab("discover");
+                setPage(1);
+              }}
+            >
+              发现
+            </button>
+            <button
+              className={`rounded-md border px-4 py-2 text-sm ${
+                tab === "featured"
+                  ? "border-accent bg-accent/10 text-accent"
+                  : "border-white/10 text-white/70 hover:bg-white/5"
+              }`}
+              onClick={() => {
+                setTab("featured");
+                setFeaturedPage(1);
+              }}
+            >
+              精选
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="glass glass-border mt-8 p-4">
+      {tab === "discover" ? (
+        <>
+          <div className="glass glass-border mt-8 p-4">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <label className="flex flex-col gap-2 text-sm">
             <span className="text-white/70">注册时间起</span>
@@ -225,16 +311,17 @@ export function TrackerClient() {
       </div>
 
       <div className="glass glass-border mt-6 overflow-hidden">
-        <div className="overflow-auto">
-          <table className="min-w-full border-collapse text-sm">
+        <div className="overflow-x-hidden">
+          <table className="w-full table-fixed border-collapse text-sm">
             <thead className="bg-white/5 text-white/80 backdrop-blur-md">
               <tr>
-                <th className="whitespace-nowrap px-4 py-3 text-left">注册时间(UTC+8)</th>
-                <th className="whitespace-nowrap px-4 py-3 text-left">用户名</th>
-                <th className="whitespace-nowrap px-4 py-3 text-left">handle</th>
-                <th className="whitespace-nowrap px-4 py-3 text-right">关注者数量</th>
-                <th className="min-w-[360px] px-4 py-3 text-left">简介</th>
-                <th className="whitespace-nowrap px-4 py-3 text-left">分类</th>
+                <th className="w-[170px] whitespace-nowrap px-4 py-3 text-left">注册时间(UTC+8)</th>
+                <th className="w-[160px] px-4 py-3 text-left">用户名</th>
+                <th className="w-[140px] whitespace-nowrap px-4 py-3 text-left">handle</th>
+                <th className="w-[120px] whitespace-nowrap px-4 py-3 text-right">关注者数量</th>
+                <th className="px-4 py-3 text-left">简介</th>
+                <th className="w-[120px] whitespace-nowrap px-4 py-3 text-left">分类</th>
+                <th className="w-[120px] whitespace-nowrap px-4 py-3 text-left">钱包</th>
               </tr>
             </thead>
             <tbody>
@@ -255,13 +342,38 @@ export function TrackerClient() {
                   <td className="whitespace-nowrap px-4 py-3 text-right text-white/80">
                     {formatNumber(row.followers_count)}
                   </td>
-                  <td className="px-4 py-3 text-white/70">{row.bio || ""}</td>
+                  <td className="px-4 py-3 text-white/70 whitespace-normal break-words">{row.bio || ""}</td>
                   <td className="px-4 py-3 text-white/80">{row.category || "/"}</td>
+                  <td className="px-4 py-3">
+                    {row.wallet_address ? (
+                      <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveWallet(activeWallet === row.wallet_address ? null : row.wallet_address);
+                          }}
+                          className="font-mono text-accent hover:underline"
+                        >
+                          {row.wallet_address.slice(0, 4)}…{row.wallet_address.slice(-4)}
+                        </button>
+                        {activeWallet === row.wallet_address && (
+                          <div
+                            className="glass glass-border absolute bottom-full left-0 z-50 mb-2 w-max p-2 text-xs shadow-xl"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <div className="font-mono text-white selection:bg-accent/30">{row.wallet_address}</div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-white/30">-</span>
+                    )}
+                  </td>
                 </tr>
               ))}
               {items.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-white/60">
+                  <td colSpan={7} className="px-4 py-8 text-center text-white/60">
                     {loading ? "加载中…" : "暂无数据（默认仅展示近 3 日）"}
                   </td>
                 </tr>
@@ -292,6 +404,207 @@ export function TrackerClient() {
           </div>
         </div>
       </div>
+        </>
+      ) : (
+        <div className="mt-8">
+          {featuredError ? <div className="mt-4 text-sm text-red-400">{featuredError}</div> : null}
+
+          <div className="glass glass-border p-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <label className="flex flex-col gap-2 text-sm">
+                <span className="text-white/70">注册时间起</span>
+                <input
+                  type="datetime-local"
+                  value={featuredStart}
+                  onChange={(e) => {
+                    setFeaturedPage(1);
+                    setFeaturedStart(e.target.value);
+                  }}
+                  className="rounded-md border border-white/10 bg-bg px-3 py-2 text-white"
+                />
+              </label>
+
+              <label className="flex flex-col gap-2 text-sm">
+                <span className="text-white/70">注册时间止</span>
+                <input
+                  type="datetime-local"
+                  value={featuredEnd}
+                  onChange={(e) => {
+                    setFeaturedPage(1);
+                    setFeaturedEnd(e.target.value);
+                  }}
+                  className="rounded-md border border-white/10 bg-bg px-3 py-2 text-white"
+                />
+              </label>
+
+              <label className="flex flex-col gap-2 text-sm">
+                <span className="text-white/70">关注者数量下限</span>
+                <input
+                  type="number"
+                  value={featuredMinFollowers}
+                  onChange={(e) => {
+                    setFeaturedPage(1);
+                    setFeaturedMinFollowers(e.target.value);
+                  }}
+                  className="rounded-md border border-white/10 bg-bg px-3 py-2 text-white"
+                  placeholder="例如 5000"
+                />
+              </label>
+
+              <label className="flex flex-col gap-2 text-sm">
+                <span className="text-white/70">关注者数量上限</span>
+                <input
+                  type="number"
+                  value={featuredMaxFollowers}
+                  onChange={(e) => {
+                    setFeaturedPage(1);
+                    setFeaturedMaxFollowers(e.target.value);
+                  }}
+                  className="rounded-md border border-white/10 bg-bg px-3 py-2 text-white"
+                  placeholder="例如 200000"
+                />
+              </label>
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-4">
+              <div className="text-sm text-white/70">分类</div>
+              {CATEGORY_OPTIONS.filter((c) => c.value !== "/").map((c) => {
+                const checked = featuredCategories.includes(c.value);
+                return (
+                  <label key={c.value} className="flex items-center gap-2 text-sm text-white/80">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => {
+                        setFeaturedPage(1);
+                        setFeaturedCategories((prev) =>
+                          prev.includes(c.value) ? prev.filter((x) => x !== c.value) : [...prev, c.value]
+                        );
+                      }}
+                      className="accent-accent"
+                    />
+                    {c.label}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="grid gap-4">
+            {featuredItems.map((row) => {
+              const key = `${row.handle}-${row.registered_at}`;
+              const expanded = featuredExpandedKey === key;
+              const recent = Array.isArray(row.grok_recent_focus) ? row.grok_recent_focus : [];
+              const exp = Array.isArray(row.grok_experience) ? row.grok_experience : [];
+              const hi = Array.isArray(row.grok_highlights) ? row.grok_highlights : [];
+              return (
+                <div key={key} className="glass glass-border p-5">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                      <a
+                        href={`https://x.com/${row.handle}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-base font-semibold text-accent hover:underline"
+                      >
+                        @{row.handle}
+                      </a>
+                      <div className="text-sm text-white/70">关注者：{formatNumber(row.followers_count)}</div>
+                      <div className="text-sm text-white/70">注册：{row.registered_at_utc8}</div>
+                      <div className="text-sm text-white/70">分类：{row.category || "/"}</div>
+                    </div>
+
+                    <button
+                      className="rounded-md border border-white/10 px-3 py-1 text-sm text-white/70 hover:bg-white/5"
+                      onClick={() => setFeaturedExpandedKey((v) => (v === key ? null : key))}
+                    >
+                      {expanded ? "收起" : "展开"}
+                    </button>
+                  </div>
+
+                  <div className="mt-3 text-sm text-white/80">
+                    <span className="text-white/60">总结：</span>
+                    {row.grok_summary || "—"}
+                  </div>
+
+                  {expanded ? (
+                    <div className="mt-4 grid gap-3 text-sm">
+                      <div className="text-white/80">
+                        <span className="text-white/60">近期在做什么/聊什么：</span>
+                        {recent.length > 0 ? (
+                          <ul className="mt-1 list-disc space-y-1 pl-5 text-white/75">
+                            {recent.slice(0, 6).map((s, idx) => (
+                              <li key={idx}>{s}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <span>—</span>
+                        )}
+                      </div>
+                      <div className="text-white/80">
+                        <span className="text-white/60">履历：</span>
+                        {exp.length > 0 ? (
+                          <ul className="mt-1 list-disc space-y-1 pl-5 text-white/75">
+                            {exp.slice(0, 6).map((s, idx) => (
+                              <li key={idx}>{s}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <span>—</span>
+                        )}
+                      </div>
+                      <div className="text-white/80">
+                        <span className="text-white/60">亮点/成绩：</span>
+                        {hi.length > 0 ? (
+                          <ul className="mt-1 list-disc space-y-1 pl-5 text-white/75">
+                            {hi.slice(0, 6).map((s, idx) => (
+                              <li key={idx}>{s}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <span>—</span>
+                        )}
+                      </div>
+                      <div className="text-white/80">
+                        <span className="text-white/60">对 Crypto 的态度：</span>
+                        {row.grok_crypto_attitude || "—"}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+
+            {featuredItems.length === 0 ? (
+              <div className="glass glass-border px-4 py-10 text-center text-white/60">
+                {featuredLoading ? "加载中…" : "暂无精选数据"}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="mt-4 flex items-center justify-between gap-4">
+            <div className="text-sm text-white/70">
+              {featuredLoading ? "加载中…" : `共 ${featuredTotal} 条，当前第 ${featuredPage} / ${featuredTotalPages} 页`}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                className="rounded-md border border-white/10 px-3 py-1 text-sm text-white/80 disabled:opacity-40"
+                disabled={featuredPage <= 1 || featuredLoading}
+                onClick={() => setFeaturedPage((p) => Math.max(1, p - 1))}
+              >
+                上一页
+              </button>
+              <button
+                className="rounded-md border border-white/10 px-3 py-1 text-sm text-white/80 disabled:opacity-40"
+                disabled={featuredPage >= featuredTotalPages || featuredLoading}
+                onClick={() => setFeaturedPage((p) => p + 1)}
+              >
+                下一页
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
