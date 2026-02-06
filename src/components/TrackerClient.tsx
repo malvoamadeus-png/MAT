@@ -19,7 +19,7 @@ function formatNumber(value: number | null) {
 }
 
 export function TrackerClient() {
-  const [tab, setTab] = useState<"discover" | "featured">("discover");
+  const [tab, setTab] = useState<"discover" | "featured" | "changelog">("discover");
 
   const [items, setItems] = useState<OnboardRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -34,6 +34,10 @@ export function TrackerClient() {
   const [minFollowers, setMinFollowers] = useState("");
   const [maxFollowers, setMaxFollowers] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
+  const [startDraft, setStartDraft] = useState("");
+  const [endDraft, setEndDraft] = useState("");
+  const [minFollowersDraft, setMinFollowersDraft] = useState("");
+  const [maxFollowersDraft, setMaxFollowersDraft] = useState("");
 
   const [featuredItems, setFeaturedItems] = useState<OnboardRow[]>([]);
   const [featuredTotal, setFeaturedTotal] = useState(0);
@@ -46,6 +50,29 @@ export function TrackerClient() {
   const [featuredMinFollowers, setFeaturedMinFollowers] = useState("");
   const [featuredMaxFollowers, setFeaturedMaxFollowers] = useState("");
   const [featuredCategories, setFeaturedCategories] = useState<string[]>([]);
+  const [featuredSort, setFeaturedSort] = useState<"registered_desc" | "registered_asc" | "followers_desc">(
+    "registered_desc"
+  );
+  const [featuredStartDraft, setFeaturedStartDraft] = useState("");
+  const [featuredEndDraft, setFeaturedEndDraft] = useState("");
+  const [featuredMinFollowersDraft, setFeaturedMinFollowersDraft] = useState("");
+  const [featuredMaxFollowersDraft, setFeaturedMaxFollowersDraft] = useState("");
+
+  function applyDiscoverFilters() {
+    setPage(1);
+    setStart(startDraft);
+    setEnd(endDraft);
+    setMinFollowers(minFollowersDraft);
+    setMaxFollowers(maxFollowersDraft);
+  }
+
+  function applyFeaturedFilters() {
+    setFeaturedPage(1);
+    setFeaturedStart(featuredStartDraft);
+    setFeaturedEnd(featuredEndDraft);
+    setFeaturedMinFollowers(featuredMinFollowersDraft);
+    setFeaturedMaxFollowers(featuredMaxFollowersDraft);
+  }
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
@@ -100,8 +127,9 @@ export function TrackerClient() {
     if (featuredMinFollowers) params.set("minFollowers", featuredMinFollowers);
     if (featuredMaxFollowers) params.set("maxFollowers", featuredMaxFollowers);
     if (featuredCategories.length > 0) params.set("categories", featuredCategories.join(","));
+    params.set("sort", featuredSort);
     return params.toString();
-  }, [featuredPage, featuredStart, featuredEnd, featuredMinFollowers, featuredMaxFollowers, featuredCategories]);
+  }, [featuredPage, featuredStart, featuredEnd, featuredMinFollowers, featuredMaxFollowers, featuredCategories, featuredSort]);
 
   async function loadFeatured() {
     if (tab !== "featured") return;
@@ -209,6 +237,16 @@ export function TrackerClient() {
             >
               精选
             </button>
+            <button
+              className={`rounded-md border px-4 py-2 text-sm ${
+                tab === "changelog"
+                  ? "border-accent bg-accent/10 text-accent"
+                  : "border-white/10 text-white/70 hover:bg-white/5"
+              }`}
+              onClick={() => setTab("changelog")}
+            >
+              更新日志
+            </button>
           </div>
         </div>
       </div>
@@ -221,10 +259,9 @@ export function TrackerClient() {
             <span className="text-white/70">注册时间起</span>
             <input
               type="datetime-local"
-              value={start}
+              value={startDraft}
               onChange={(e) => {
-                setPage(1);
-                setStart(e.target.value);
+                setStartDraft(e.target.value);
               }}
               className="rounded-md border border-white/10 bg-bg px-3 py-2 text-white"
             />
@@ -234,10 +271,9 @@ export function TrackerClient() {
             <span className="text-white/70">注册时间止</span>
             <input
               type="datetime-local"
-              value={end}
+              value={endDraft}
               onChange={(e) => {
-                setPage(1);
-                setEnd(e.target.value);
+                setEndDraft(e.target.value);
               }}
               className="rounded-md border border-white/10 bg-bg px-3 py-2 text-white"
             />
@@ -247,10 +283,9 @@ export function TrackerClient() {
             <span className="text-white/70">关注者数量下限</span>
             <input
               type="number"
-              value={minFollowers}
+              value={minFollowersDraft}
               onChange={(e) => {
-                setPage(1);
-                setMinFollowers(e.target.value);
+                setMinFollowersDraft(e.target.value);
               }}
               className="rounded-md border border-white/10 bg-bg px-3 py-2 text-white"
               placeholder="例如 100"
@@ -261,10 +296,9 @@ export function TrackerClient() {
             <span className="text-white/70">关注者数量上限</span>
             <input
               type="number"
-              value={maxFollowers}
+              value={maxFollowersDraft}
               onChange={(e) => {
-                setPage(1);
-                setMaxFollowers(e.target.value);
+                setMaxFollowersDraft(e.target.value);
               }}
               className="rounded-md border border-white/10 bg-bg px-3 py-2 text-white"
               placeholder="例如 10000"
@@ -296,15 +330,23 @@ export function TrackerClient() {
             })}
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-white/80">
-            <input
-              type="checkbox"
-              checked={autoRefresh}
-              onChange={(e) => setAutoRefresh(e.target.checked)}
-              className="accent-accent"
-            />
-            自动刷新（1 分钟）
-          </label>
+          <div className="flex items-center gap-3">
+            <button
+              className="rounded-md border border-accent px-4 py-2 text-sm text-accent hover:bg-accent/10"
+              onClick={applyDiscoverFilters}
+            >
+              确认筛选
+            </button>
+            <label className="flex items-center gap-2 text-sm text-white/80">
+              <input
+                type="checkbox"
+                checked={autoRefresh}
+                onChange={(e) => setAutoRefresh(e.target.checked)}
+                className="accent-accent"
+              />
+              自动刷新（1 分钟）
+            </label>
+          </div>
         </div>
 
         {error ? <div className="mt-4 text-sm text-red-400">{error}</div> : null}
@@ -405,7 +447,7 @@ export function TrackerClient() {
         </div>
       </div>
         </>
-      ) : (
+      ) : tab === "featured" ? (
         <div className="mt-8">
           {featuredError ? <div className="mt-4 text-sm text-red-400">{featuredError}</div> : null}
 
@@ -415,10 +457,9 @@ export function TrackerClient() {
                 <span className="text-white/70">注册时间起</span>
                 <input
                   type="datetime-local"
-                  value={featuredStart}
+                  value={featuredStartDraft}
                   onChange={(e) => {
-                    setFeaturedPage(1);
-                    setFeaturedStart(e.target.value);
+                    setFeaturedStartDraft(e.target.value);
                   }}
                   className="rounded-md border border-white/10 bg-bg px-3 py-2 text-white"
                 />
@@ -428,10 +469,9 @@ export function TrackerClient() {
                 <span className="text-white/70">注册时间止</span>
                 <input
                   type="datetime-local"
-                  value={featuredEnd}
+                  value={featuredEndDraft}
                   onChange={(e) => {
-                    setFeaturedPage(1);
-                    setFeaturedEnd(e.target.value);
+                    setFeaturedEndDraft(e.target.value);
                   }}
                   className="rounded-md border border-white/10 bg-bg px-3 py-2 text-white"
                 />
@@ -441,10 +481,9 @@ export function TrackerClient() {
                 <span className="text-white/70">关注者数量下限</span>
                 <input
                   type="number"
-                  value={featuredMinFollowers}
+                  value={featuredMinFollowersDraft}
                   onChange={(e) => {
-                    setFeaturedPage(1);
-                    setFeaturedMinFollowers(e.target.value);
+                    setFeaturedMinFollowersDraft(e.target.value);
                   }}
                   className="rounded-md border border-white/10 bg-bg px-3 py-2 text-white"
                   placeholder="例如 5000"
@@ -455,10 +494,9 @@ export function TrackerClient() {
                 <span className="text-white/70">关注者数量上限</span>
                 <input
                   type="number"
-                  value={featuredMaxFollowers}
+                  value={featuredMaxFollowersDraft}
                   onChange={(e) => {
-                    setFeaturedPage(1);
-                    setFeaturedMaxFollowers(e.target.value);
+                    setFeaturedMaxFollowersDraft(e.target.value);
                   }}
                   className="rounded-md border border-white/10 bg-bg px-3 py-2 text-white"
                   placeholder="例如 200000"
@@ -466,27 +504,69 @@ export function TrackerClient() {
               </label>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center gap-4">
-              <div className="text-sm text-white/70">分类</div>
-              {CATEGORY_OPTIONS.filter((c) => c.value !== "/").map((c) => {
-                const checked = featuredCategories.includes(c.value);
-                return (
-                  <label key={c.value} className="flex items-center gap-2 text-sm text-white/80">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => {
-                        setFeaturedPage(1);
-                        setFeaturedCategories((prev) =>
-                          prev.includes(c.value) ? prev.filter((x) => x !== c.value) : [...prev, c.value]
-                        );
-                      }}
-                      className="accent-accent"
-                    />
-                    {c.label}
-                  </label>
-                );
-              })}
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="text-sm text-white/70">分类</div>
+                {CATEGORY_OPTIONS.filter((c) => c.value !== "/").map((c) => {
+                  const checked = featuredCategories.includes(c.value);
+                  return (
+                    <label key={c.value} className="flex items-center gap-2 text-sm text-white/80">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => {
+                          setFeaturedPage(1);
+                          setFeaturedCategories((prev) =>
+                            prev.includes(c.value) ? prev.filter((x) => x !== c.value) : [...prev, c.value]
+                          );
+                        }}
+                        className="accent-accent"
+                      />
+                      {c.label}
+                    </label>
+                  );
+                })}
+              </div>
+              <button
+                className="rounded-md border border-accent px-4 py-2 text-sm text-accent hover:bg-accent/10"
+                onClick={applyFeaturedFilters}
+              >
+                确认筛选
+              </button>
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center gap-3 text-sm">
+              <div className="text-white/70">排序：</div>
+              <button
+                className={`rounded-md border px-3 py-1 ${
+                  featuredSort === "registered_desc" || featuredSort === "registered_asc"
+                    ? "border-accent bg-accent/10 text-accent"
+                    : "border-white/10 text-white/70 hover:bg-white/5"
+                }`}
+                onClick={() => {
+                  setFeaturedPage(1);
+                  setFeaturedSort((prev) => {
+                    if (prev === "registered_desc") return "registered_asc";
+                    return "registered_desc";
+                  });
+                }}
+              >
+                时间{" "}
+                {featuredSort === "registered_desc" ? "↓" : featuredSort === "registered_asc" ? "↑" : ""}
+              </button>
+              <button
+                className={`rounded-md border px-3 py-1 ${
+                  featuredSort === "followers_desc"
+                    ? "border-accent bg-accent/10 text-accent"
+                    : "border-white/10 text-white/70 hover:bg-white/5"
+                }`}
+                onClick={() => {
+                  setFeaturedPage(1);
+                  setFeaturedSort("followers_desc");
+                }}
+              >
+                关注者数量 {featuredSort === "followers_desc" ? "↓" : ""}
+              </button>
             </div>
           </div>
 
@@ -601,6 +681,18 @@ export function TrackerClient() {
               >
                 下一页
               </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-8">
+          <div className="glass glass-border p-5">
+            <div className="text-lg font-semibold text-white/90">更新日志</div>
+            <div className="mt-3 space-y-2 text-sm text-white/80">
+              <div>2/4 首个版本上线，支持分钟级Moltbook注册账号抓取及初级分析</div>
+              <div>2/4 新增精选账号钱包抓取功能，当前仅针对5000以上关注者、分类不为/的账号生效</div>
+              <div>2/5 新增精选账号深度分析模块，当前仅针对5000以上关注者、分类不为/的账号生效</div>
+              <div>2/6 UI更新，新增多类自定义筛选、排序功能</div>
             </div>
           </div>
         </div>

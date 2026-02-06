@@ -12,6 +12,7 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const page = Math.max(1, Number(url.searchParams.get("page") || "1"));
     const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get("pageSize") || "20")));
+    const sort = (url.searchParams.get("sort") || "registered_desc").trim();
     const start = toUtc8MinuteText(url.searchParams.get("start") || "");
     const end = toUtc8MinuteText(url.searchParams.get("end") || "");
     const minFollowers = url.searchParams.get("minFollowers");
@@ -28,9 +29,7 @@ export async function GET(request: Request) {
       .select(columns, { count: "exact" })
       .gt("followers_count", 5000)
       .neq("category", "/")
-      .not("grok_checked_at", "is", null)
-      .order("followers_count", { ascending: false })
-      .order("registered_at", { ascending: false });
+      .not("grok_checked_at", "is", null);
 
     const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
     query = query.gte("registered_at", threeDaysAgo);
@@ -48,6 +47,16 @@ export async function GET(request: Request) {
     if (categories.length > 0) {
       const orExpr = categories.map((c) => `category.ilike.%${c}%`).join(",");
       query = query.or(orExpr);
+    }
+
+    if (sort === "registered_asc") {
+      query = query.order("registered_at", { ascending: true }).order("followers_count", { ascending: false });
+    } else if (sort === "followers_desc") {
+      query = query.order("followers_count", { ascending: false }).order("registered_at", { ascending: false });
+    } else if (sort === "followers_asc") {
+      query = query.order("followers_count", { ascending: true }).order("registered_at", { ascending: false });
+    } else {
+      query = query.order("registered_at", { ascending: false }).order("followers_count", { ascending: false });
     }
 
     const from = (page - 1) * pageSize;
