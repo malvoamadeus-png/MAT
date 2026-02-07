@@ -7,11 +7,16 @@ function toUtc8MinuteText(value: string) {
   return value.replace("T", " ").slice(0, 16);
 }
 
+function normalizeHandle(value: string) {
+  return (value || "").trim().replace(/^@+/, "");
+}
+
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const page = Math.max(1, Number(url.searchParams.get("page") || "1"));
     const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get("pageSize") || "20")));
+    const handle = normalizeHandle(url.searchParams.get("handle") || "");
     const start = toUtc8MinuteText(url.searchParams.get("start") || "");
     const end = toUtc8MinuteText(url.searchParams.get("end") || "");
     const minFollowers = url.searchParams.get("minFollowers");
@@ -30,6 +35,7 @@ export async function GET(request: Request) {
     const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
     query = query.gte("registered_at", threeDaysAgo);
 
+    if (handle) query = query.ilike("handle", handle);
     if (start) query = query.gte("registered_at_utc8", start);
     if (end) query = query.lte("registered_at_utc8", end);
 
@@ -62,4 +68,3 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: e?.message || "Unknown error" }, { status: 500 });
   }
 }
-

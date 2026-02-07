@@ -38,6 +38,8 @@ export function TrackerClient() {
   const [endDraft, setEndDraft] = useState("");
   const [minFollowersDraft, setMinFollowersDraft] = useState("");
   const [maxFollowersDraft, setMaxFollowersDraft] = useState("");
+  const [handle, setHandle] = useState("");
+  const [handleDraft, setHandleDraft] = useState("");
 
   const [featuredItems, setFeaturedItems] = useState<OnboardRow[]>([]);
   const [featuredTotal, setFeaturedTotal] = useState(0);
@@ -57,6 +59,8 @@ export function TrackerClient() {
   const [featuredEndDraft, setFeaturedEndDraft] = useState("");
   const [featuredMinFollowersDraft, setFeaturedMinFollowersDraft] = useState("");
   const [featuredMaxFollowersDraft, setFeaturedMaxFollowersDraft] = useState("");
+  const [featuredHandle, setFeaturedHandle] = useState("");
+  const [featuredHandleDraft, setFeaturedHandleDraft] = useState("");
 
   function applyDiscoverFilters() {
     setPage(1);
@@ -64,6 +68,7 @@ export function TrackerClient() {
     setEnd(endDraft);
     setMinFollowers(minFollowersDraft);
     setMaxFollowers(maxFollowersDraft);
+    setHandle(handleDraft.trim());
   }
 
   function applyFeaturedFilters() {
@@ -72,6 +77,7 @@ export function TrackerClient() {
     setFeaturedEnd(featuredEndDraft);
     setFeaturedMinFollowers(featuredMinFollowersDraft);
     setFeaturedMaxFollowers(featuredMaxFollowersDraft);
+    setFeaturedHandle(featuredHandleDraft.trim());
   }
 
   const queryString = useMemo(() => {
@@ -83,8 +89,9 @@ export function TrackerClient() {
     if (minFollowers) params.set("minFollowers", minFollowers);
     if (maxFollowers) params.set("maxFollowers", maxFollowers);
     if (categories.length > 0) params.set("categories", categories.join(","));
+    if (handle) params.set("handle", handle);
     return params.toString();
-  }, [page, start, end, minFollowers, maxFollowers, categories]);
+  }, [page, start, end, minFollowers, maxFollowers, categories, handle]);
 
   async function load() {
     if (tab !== "discover") return;
@@ -127,9 +134,19 @@ export function TrackerClient() {
     if (featuredMinFollowers) params.set("minFollowers", featuredMinFollowers);
     if (featuredMaxFollowers) params.set("maxFollowers", featuredMaxFollowers);
     if (featuredCategories.length > 0) params.set("categories", featuredCategories.join(","));
+    if (featuredHandle) params.set("handle", featuredHandle);
     params.set("sort", featuredSort);
     return params.toString();
-  }, [featuredPage, featuredStart, featuredEnd, featuredMinFollowers, featuredMaxFollowers, featuredCategories, featuredSort]);
+  }, [
+    featuredPage,
+    featuredStart,
+    featuredEnd,
+    featuredMinFollowers,
+    featuredMaxFollowers,
+    featuredCategories,
+    featuredHandle,
+    featuredSort
+  ]);
 
   async function loadFeatured() {
     if (tab !== "featured") return;
@@ -347,6 +364,19 @@ export function TrackerClient() {
               自动刷新（1 分钟）
             </label>
           </div>
+        </div>
+
+        <div className="mt-4">
+          <label className="flex flex-col gap-2 text-sm">
+            <span className="text-white/70">指定 Handle（可带 @）</span>
+            <input
+              type="text"
+              value={handleDraft}
+              onChange={(e) => setHandleDraft(e.target.value)}
+              className="rounded-md border border-white/10 bg-bg px-3 py-2 text-white"
+              placeholder="例如 @santisiri 或 santisiri"
+            />
+          </label>
         </div>
 
         {error ? <div className="mt-4 text-sm text-red-400">{error}</div> : null}
@@ -568,6 +598,19 @@ export function TrackerClient() {
                 关注者数量 {featuredSort === "followers_desc" ? "↓" : ""}
               </button>
             </div>
+
+            <div className="mt-4">
+              <label className="flex flex-col gap-2 text-sm">
+                <span className="text-white/70">指定 Handle（可带 @）</span>
+                <input
+                  type="text"
+                  value={featuredHandleDraft}
+                  onChange={(e) => setFeaturedHandleDraft(e.target.value)}
+                  className="rounded-md border border-white/10 bg-bg px-3 py-2 text-white"
+                  placeholder="例如 @santisiri 或 santisiri"
+                />
+              </label>
+            </div>
           </div>
 
           <div className="grid gap-4">
@@ -693,6 +736,7 @@ export function TrackerClient() {
               <div>2/4 新增精选账号钱包抓取功能，当前仅针对5000以上关注者、分类不为/的账号生效</div>
               <div>2/5 新增精选账号深度分析模块，当前仅针对5000以上关注者、分类不为/的账号生效</div>
               <div>2/6 UI更新，新增多类自定义筛选、排序功能</div>
+              <div>2/7 新增支持按Handle精确筛选（可带@）</div>
             </div>
           </div>
         </div>
