@@ -737,6 +737,8 @@ export function TrackerClient() {
               <div>2/5 新增精选账号深度分析模块，当前仅针对5000以上关注者、分类不为/的账号生效</div>
               <div>2/6 UI更新，新增多类自定义筛选、排序功能</div>
               <div>2/7 新增支持按Handle精确筛选（可带@）</div>
+              <div>2/9 将精选-关注者数量筛选范围下调至3000</div>
+              <div>待定 为精选账号添加所有bankr发币ca</div>
             </div>
           </div>
         </div>
